@@ -1,12 +1,14 @@
 package com.otaliastudios.cameraview.engine;
 
 import android.content.Context;
+import android.graphics.Bitmap;
 import android.graphics.PointF;
 import android.location.Location;
 
 
 import android.os.Handler;
 import android.os.Looper;
+import android.util.Log;
 
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.OnSuccessListener;
@@ -19,6 +21,7 @@ import com.otaliastudios.cameraview.CameraOptions;
 import com.otaliastudios.cameraview.PictureResult;
 import com.otaliastudios.cameraview.controls.AudioCodec;
 import com.otaliastudios.cameraview.controls.PictureFormat;
+import com.otaliastudios.cameraview.engine.offset.Axis;
 import com.otaliastudios.cameraview.engine.orchestrator.CameraOrchestrator;
 import com.otaliastudios.cameraview.engine.orchestrator.CameraState;
 import com.otaliastudios.cameraview.engine.orchestrator.CameraStateOrchestrator;
@@ -135,6 +138,19 @@ public abstract class CameraEngine implements
     // If this is 2, this means we'll try to run destroy() twice.
     private static final int DESTROY_RETRIES = 2;
 
+    protected int previewWidth = 0;
+    protected int previewHeight = 0;
+    protected int rotation = 0;
+    protected int yRowStride;
+    protected int[] rgbBytes = null;
+    protected byte[][] yuvBytes = new byte[3][];
+
+    protected boolean isProcessingFrame = false;
+
+    protected Bitmap rgbFrameBitmap = null;
+    protected Runnable postInferenceCallback;
+    protected Runnable imageConverter;
+
     private WorkerHandler mHandler;
     @VisibleForTesting Handler mCrashHandler;
     private final Callback mCallback;
@@ -156,6 +172,11 @@ public abstract class CameraEngine implements
         mCallback = callback;
         mCrashHandler = new Handler(Looper.getMainLooper());
         recreateHandler(false);
+    }
+
+    public Bitmap getRgbFrameBitmap() {
+        rgbFrameBitmap.setPixels(getRgbBytes(), 0, previewWidth, 0, 0, previewWidth, previewHeight);
+        return rgbFrameBitmap;
     }
 
     @NonNull
@@ -522,6 +543,34 @@ public abstract class CameraEngine implements
                 return onStartPreview();
             }
         });
+    }
+
+    protected void updateData(int width, int height) {
+        Log.i("CameraConf", "updateData width: " + width + "; height: " + height);
+//        final Size previewSize = getPreviewStreamSize(Reference.VIEW);
+        rotation = getAngles().offset(Reference.VIEW, Reference.OUTPUT, Axis.ABSOLUTE);
+        if (width <=0 || height <= 0) {
+            Log.e("Camera", "PreviewSize is null");
+            return;
+        }
+
+        previewWidth = width;
+        previewHeight = height;
+        rgbBytes = new int[previewWidth * previewHeight];
+
+        rgbFrameBitmap = Bitmap.createBitmap(previewWidth, previewHeight, Bitmap.Config.ARGB_8888);
+        Log.i("CameraConfig", "previewWidth: " + previewWidth + ", previewHeight:" + previewHeight);
+    }
+
+    protected int[] getRgbBytes() {
+        imageConverter.run();
+        return rgbBytes;
+    }
+
+    public void readyForNextImage() {
+        if (postInferenceCallback != null) {
+            postInferenceCallback.run();
+        }
     }
 
     @SuppressWarnings("UnusedReturnValue")

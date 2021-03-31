@@ -104,7 +104,8 @@ public class Frame {
     }
 
     /**
-     * Returns the frame data.
+     * Camera1: byte[]
+     * Camera2: android.media.Image image
      * @return the frame data
      */
     @SuppressWarnings("unchecked")

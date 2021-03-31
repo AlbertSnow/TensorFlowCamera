@@ -2,7 +2,6 @@ package com.otaliastudios.cameraview.demo
 
 import android.animation.ValueAnimator
 import android.content.Intent
-import android.content.pm.PackageManager
 import android.content.pm.PackageManager.PERMISSION_GRANTED
 import android.graphics.*
 import android.os.Bundle
@@ -22,18 +21,17 @@ import com.otaliastudios.cameraview.frame.Frame
 import com.otaliastudios.cameraview.frame.FrameProcessor
 import java.io.ByteArrayOutputStream
 import java.io.File
-import java.util.*
 
-class CameraActivity : AppCompatActivity(), View.OnClickListener, OptionView.Callback {
+open class CameraActivity : AppCompatActivity(), View.OnClickListener, OptionView.Callback {
 
     companion object {
         private val LOG = CameraLogger.create("DemoApp")
-        private const val USE_FRAME_PROCESSOR = false
+        private const val USE_FRAME_PROCESSOR = true
         private const val DECODE_BITMAP = false
     }
 
-    private val camera: CameraView by lazy { findViewById(R.id.camera) }
-    private val controlPanel: ViewGroup by lazy { findViewById(R.id.controls) }
+    protected val camera: CameraView by lazy { findViewById<CameraView>(R.id.camera) }
+    private val controlPanel: ViewGroup by lazy { findViewById<ViewGroup>(R.id.controls) }
     private var captureTime: Long = 0
 
     private var currentFilter = 0
@@ -54,27 +52,12 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener, OptionView.Cal
                     lastTime = newTime
                     LOG.v("Frame delayMillis:", delay, "FPS:", 1000 / delay)
                     if (DECODE_BITMAP) {
-                        if (frame.format == ImageFormat.NV21
-                                && frame.dataClass == ByteArray::class.java) {
-                            val data = frame.getData<ByteArray>()
-                            val yuvImage = YuvImage(data,
-                                    frame.format,
-                                    frame.size.width,
-                                    frame.size.height,
-                                    null)
-                            val jpegStream = ByteArrayOutputStream()
-                            yuvImage.compressToJpeg(Rect(0, 0,
-                                    frame.size.width,
-                                    frame.size.height), 100, jpegStream)
-                            val jpegByteArray = jpegStream.toByteArray()
-                            val bitmap = BitmapFactory.decodeByteArray(jpegByteArray,
-                                    0, jpegByteArray.size)
-                            bitmap.toString()
-                        }
+                        getBitmap(frame)
                     }
                 }
             })
         }
+        configCamera(camera)
         findViewById<View>(R.id.edit).setOnClickListener(this)
         findViewById<View>(R.id.capturePicture).setOnClickListener(this)
         findViewById<View>(R.id.capturePictureSnapshot).setOnClickListener(this)
@@ -149,6 +132,30 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener, OptionView.Cal
         animator.start()
     }
 
+    protected fun getBitmap(frame: Frame): Bitmap? {
+        if (frame.format == ImageFormat.NV21
+                && frame.dataClass == ByteArray::class.java) {
+            val data = frame.getData<ByteArray>()
+            val yuvImage = YuvImage(data,
+                    frame.format,
+                    frame.size.width,
+                    frame.size.height,
+                    null)
+            val jpegStream = ByteArrayOutputStream()
+            yuvImage.compressToJpeg(Rect(0, 0,
+                    frame.size.width,
+                    frame.size.height), 100, jpegStream)
+            val jpegByteArray = jpegStream.toByteArray()
+            val bitmap = BitmapFactory.decodeByteArray(jpegByteArray,
+                    0, jpegByteArray.size)
+            return bitmap
+        }
+        return null
+    }
+
+    open fun configCamera(camera: CameraView) {
+    }
+
     private fun message(content: String, important: Boolean) {
         if (important) {
             LOG.w(content)
@@ -221,6 +228,13 @@ class CameraActivity : AppCompatActivity(), View.OnClickListener, OptionView.Cal
             super.onZoomChanged(newValue, bounds, fingers)
             message("Zoom:$newValue", false)
         }
+
+        override fun onPreviewSizeChosen(width: Int, height: Int): Unit {
+            onPreviewSizeChange(width, height);
+        }
+    }
+
+    open fun onPreviewSizeChange(width: Int, height: Int): Unit {
     }
 
     override fun onClick(view: View) {

@@ -175,6 +175,10 @@ public class CameraView extends FrameLayout implements LifecycleObserver {
         initialize(context, attrs);
     }
 
+    public CameraEngine getCameraEngin() {
+        return mCameraEngine;
+    }
+
     //region Init
 
     @SuppressWarnings("WrongConstant")
@@ -2239,7 +2243,7 @@ public class CameraView extends FrameLayout implements LifecycleObserver {
             // Request a layout pass for onMeasure() to do its stuff.
             // Potentially this will change CameraView size, which changes Surface size,
             // which triggers a new Preview size. But hopefully it will converge.
-            Size previewSize = mCameraEngine.getPreviewStreamSize(Reference.VIEW);
+            final Size previewSize = mCameraEngine.getPreviewStreamSize(Reference.VIEW);
             if (previewSize == null) {
                 throw new RuntimeException("Preview stream size should not be null here.");
             } else if (previewSize.equals(mLastPreviewStreamSize)) {
@@ -2252,6 +2256,10 @@ public class CameraView extends FrameLayout implements LifecycleObserver {
                     @Override
                     public void run() {
                         requestLayout();
+                        for (CameraListener listener : mListeners) {
+                            listener.onPreviewSizeChosen(previewSize.getWidth(),
+                                    previewSize.getHeight());
+                        }
                     }
                 });
             }

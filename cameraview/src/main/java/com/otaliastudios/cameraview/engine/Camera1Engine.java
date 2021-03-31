@@ -46,6 +46,7 @@ import com.otaliastudios.cameraview.picture.SnapshotGlPictureRecorder;
 import com.otaliastudios.cameraview.preview.RendererCameraPreview;
 import com.otaliastudios.cameraview.size.AspectRatio;
 import com.otaliastudios.cameraview.size.Size;
+import com.otaliastudios.cameraview.utils.ImageUtils;
 import com.otaliastudios.cameraview.video.Full1VideoRecorder;
 import com.otaliastudios.cameraview.video.SnapshotVideoRecorder;
 
@@ -55,6 +56,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 
+import static com.otaliastudios.cameraview.utils.ImageUtils.LOGGER;
 
 public class Camera1Engine extends CameraBaseEngine implements
         Camera.PreviewCallback,
@@ -848,6 +850,8 @@ public class Camera1Engine extends CameraBaseEngine implements
 
     @Override
     public void onPreviewFrame(byte[] data, Camera camera) {
+        handleFrame(data, camera);
+
         if (data == null) {
             // Seen this happen in logs.
             return;
@@ -856,6 +860,48 @@ public class Camera1Engine extends CameraBaseEngine implements
         if (frame != null) {
             getCallback().dispatchFrame(frame);
         }
+    }
+
+    public void handleFrame(final byte[] bytes, final Camera camera) {
+        if (isProcessingFrame) {
+            LOGGER.w("Dropping frame!");
+            return;
+        }
+
+        try {
+            // Initialize the storage bitmaps once when the resolution is known.
+            if (rgbBytes == null) {
+                Camera.Size previewSize = camera.getParameters().getPreviewSize();
+                previewHeight = previewSize.height;
+                previewWidth = previewSize.width;
+                rgbBytes = new int[previewWidth * previewHeight];
+//                onPreviewSizeChosen(new android.util.Size(previewSize.width, previewSize.height), 90);
+            }
+        } catch (final Exception e) {
+            LOGGER.e(e, "Exception!");
+            return;
+        }
+
+        isProcessingFrame = true;
+        yuvBytes[0] = bytes;
+        yRowStride = previewWidth;
+
+        imageConverter =
+                new Runnable() {
+                    @Override
+                    public void run() {
+                        ImageUtils.convertYUV420SPToARGB8888(bytes, previewWidth, previewHeight, rgbBytes);
+                    }
+                };
+
+        postInferenceCallback =
+                new Runnable() {
+                    @Override
+                    public void run() {
+                        camera.addCallbackBuffer(bytes);
+                        isProcessingFrame = false;
+                    }
+                };
     }
 
     //endregion

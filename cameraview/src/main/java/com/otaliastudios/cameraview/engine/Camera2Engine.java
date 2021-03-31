@@ -68,9 +68,11 @@ import com.otaliastudios.cameraview.picture.Snapshot2PictureRecorder;
 import com.otaliastudios.cameraview.preview.RendererCameraPreview;
 import com.otaliastudios.cameraview.size.AspectRatio;
 import com.otaliastudios.cameraview.size.Size;
+import com.otaliastudios.cameraview.utils.ImageUtils;
 import com.otaliastudios.cameraview.video.Full2VideoRecorder;
 import com.otaliastudios.cameraview.video.SnapshotVideoRecorder;
 
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -78,6 +80,8 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
+
+import static com.otaliastudios.cameraview.utils.ImageUtils.LOGGER;
 
 @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
 public class Camera2Engine extends CameraBaseEngine implements
@@ -572,6 +576,7 @@ public class Camera2Engine extends CameraBaseEngine implements
                     null);
             mFrameProcessingSurface = mFrameProcessingReader.getSurface();
             outputSurfaces.add(mFrameProcessingSurface);
+            updateData(mFrameProcessingSize.getWidth(), mFrameProcessingSize.getHeight());
         } else {
             mFrameProcessingReader = null;
             mFrameProcessingSize = null;
@@ -1464,10 +1469,13 @@ public class Camera2Engine extends CameraBaseEngine implements
     @Override
     public void onImageAvailable(ImageReader reader) {
         LOG.v("onImageAvailable:", "trying to acquire Image.");
+        handleFrame(reader);
         Image image = null;
         try {
             image = reader.acquireLatestImage();
-        } catch (Exception ignore) { }
+        } catch (Exception ignore) {
+            ignore.printStackTrace();
+        }
         if (image == null) {
             LOG.w("onImageAvailable:", "failed to acquire Image!");
         } else if (getState() == CameraState.PREVIEW && !isChangingState()) {
@@ -1484,6 +1492,76 @@ public class Camera2Engine extends CameraBaseEngine implements
         } else {
             LOG.i("onImageAvailable:", "Image acquired in wrong state. Closing it now.");
             image.close();
+        }
+    }
+
+    public void handleFrame(ImageReader reader) {
+        if (previewWidth == 0 || previewHeight == 0) {
+            return;
+        }
+        if (rgbBytes == null) {
+            rgbBytes = new int[previewWidth * previewHeight];
+        }
+        try {
+            final Image image = reader.acquireLatestImage();
+
+            if (image == null) {
+                return;
+            }
+
+            if (isProcessingFrame) {
+                image.close();
+                return;
+            }
+            isProcessingFrame = true;
+            final Image.Plane[] planes = image.getPlanes();
+            fillBytes(planes, yuvBytes);
+            yRowStride = planes[0].getRowStride();
+            final int uvRowStride = planes[1].getRowStride();
+            final int uvPixelStride = planes[1].getPixelStride();
+
+            imageConverter =
+                    new Runnable() {
+                        @Override
+                        public void run() {
+                            ImageUtils.convertYUV420ToARGB8888(
+                                    yuvBytes[0],
+                                    yuvBytes[1],
+                                    yuvBytes[2],
+                                    previewWidth,
+                                    previewHeight,
+                                    yRowStride,
+                                    uvRowStride,
+                                    uvPixelStride,
+                                    rgbBytes);
+                        }
+                    };
+
+            postInferenceCallback =
+                    new Runnable() {
+                        @Override
+                        public void run() {
+                            image.close();
+                            isProcessingFrame = false;
+                        }
+                    };
+        } catch (final Exception e) {
+            LOGGER.e(e, "Exception!");
+            return;
+        }
+    }
+
+
+    protected void fillBytes(final Image.Plane[] planes, final byte[][] yuvBytes) {
+        // Because of the variable row stride it's not possible to know in
+        // advance the actual necessary dimensions of the yuv planes.
+        for (int i = 0; i < planes.length; ++i) {
+            final ByteBuffer buffer = planes[i].getBuffer();
+            if (yuvBytes[i] == null) {
+                LOGGER.d("Initializing buffer %d at size %d", i, buffer.capacity());
+                yuvBytes[i] = new byte[buffer.capacity()];
+            }
+            buffer.get(yuvBytes[i]);
         }
     }
 

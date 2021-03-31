@@ -169,5 +169,9 @@ public abstract class CameraListener {
     public void onPictureShutter() {
 
     }
+
+    public void onPreviewSizeChosen(int width, int height) {
+
+    }
     
 }
