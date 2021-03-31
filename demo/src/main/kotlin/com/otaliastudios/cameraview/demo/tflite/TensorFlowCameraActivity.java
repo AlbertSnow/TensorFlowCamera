@@ -8,6 +8,7 @@ import android.util.Log;
 import android.view.Surface;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.WorkerThread;
 
 import com.otaliastudios.cameraview.CameraView;
 import com.otaliastudios.cameraview.demo.CameraActivity;
@@ -137,6 +138,7 @@ public class TensorFlowCameraActivity extends CameraActivity {
 //        });
 //    }
 
+    @WorkerThread
     public void processImage(final CameraEngine engine, final Bitmap bitmap) {
         runInBackground(
                 new Runnable() {
@@ -172,7 +174,7 @@ public class TensorFlowCameraActivity extends CameraActivity {
                     builder.append(String.format("%.2f", (100 * recognition.getConfidence())) + "%");
                 }
             }
-            builder.append(" ____ ");
+            builder.append(" -- ");
 
             Recognition recognition1 = results.get(1);
             if (recognition1 != null) {
@@ -184,7 +186,7 @@ public class TensorFlowCameraActivity extends CameraActivity {
                             String.format("%.2f", (100 * recognition1.getConfidence())) + "%");
                 }
             }
-            builder.append(" ____ ");
+            builder.append(" -- ");
 
             Recognition recognition2 = results.get(2);
             if (recognition2 != null) {
@@ -197,27 +199,39 @@ public class TensorFlowCameraActivity extends CameraActivity {
                 }
             }
 
-            Log.i(TAG, "Result: " + builder.toString());
+            final String msg = builder.toString();
+            Log.i(TAG, "Result: " + msg);
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    updateTips(msg);
+                }
+            });
         }
-
     }
 
-    private void recreateClassifier(Classifier.Device device, int numThreads) {
-        if (classifier != null) {
-            Log.d(TAG, "Closing classifier.");
-            classifier.close();
-            classifier = null;
-        }
-        try {
-            Log.d(TAG, String.format("Creating classifier (device=%s, numThreads=%d)", device, numThreads));
-            classifier = Classifier.create(this, device, numThreads);
-        } catch (IOException e) {
-            Log.e(TAG, "Failed to create classifier.");
-        }
+    @WorkerThread
+    private void recreateClassifier(final Classifier.Device device, final int numThreads) {
+        runInBackground(new Runnable() {
+            @Override
+            public void run() {
+                if (classifier != null) {
+                    Log.d(TAG, "Closing classifier.");
+                    classifier.close();
+                    classifier = null;
+                }
+                try {
+                    Log.d(TAG, String.format("Creating classifier (device=%s, numThreads=%d)", device, numThreads));
+                    classifier = Classifier.create(TensorFlowCameraActivity.this, device, numThreads);
+                } catch (IOException e) {
+                    Log.e(TAG, "Failed to create classifier.");
+                }
 
-        // Updates the input image size.
-        imageSizeX = classifier.getImageSizeX();
-        imageSizeY = classifier.getImageSizeY();
+                // Updates the input image size.
+                imageSizeX = classifier.getImageSizeX();
+                imageSizeY = classifier.getImageSizeY();
+            }
+        });
     }
 
     private synchronized void runInBackground(final Runnable r) {

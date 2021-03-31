@@ -9,6 +9,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.ViewGroup.LayoutParams.MATCH_PARENT
 import android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.bottomsheet.BottomSheetBehavior
@@ -36,6 +37,7 @@ open class CameraActivity : AppCompatActivity(), View.OnClickListener, OptionVie
 
     private var currentFilter = 0
     private val allFilters = Filters.values()
+    protected var tipsView: TextView ?= null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -58,6 +60,7 @@ open class CameraActivity : AppCompatActivity(), View.OnClickListener, OptionVie
             })
         }
         configCamera(camera)
+        tipsView = findViewById(R.id.cameraMainTipsTV)
         findViewById<View>(R.id.edit).setOnClickListener(this)
         findViewById<View>(R.id.capturePicture).setOnClickListener(this)
         findViewById<View>(R.id.capturePictureSnapshot).setOnClickListener(this)
@@ -151,6 +154,10 @@ open class CameraActivity : AppCompatActivity(), View.OnClickListener, OptionVie
             return bitmap
         }
         return null
+    }
+
+    protected fun updateTips(msg: String?) {
+        tipsView?.text = msg ?: ""
     }
 
     open fun configCamera(camera: CameraView) {

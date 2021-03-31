@@ -51,6 +51,16 @@
         android:layout_marginBottom="96dp"
         android:layout_gravity="bottom|start">
 
+        <TextView
+            android:id="@+id/cameraMainTipsTV"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="waiting...."
+            android:textSize="23sp"
+            android:textColor="#FFF"
+            android:background="#23FFFFFF"
+            />
+
         <ImageButton
             android:id="@+id/changeFilter"
             android:layout_width="56dp"
