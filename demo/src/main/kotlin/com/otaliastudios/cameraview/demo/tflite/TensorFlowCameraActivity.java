@@ -27,7 +27,7 @@ import java.util.List;
  * Create by zhaojialiang02  2021/3/30 4:15 PM
  */
 public class TensorFlowCameraActivity extends CameraActivity {
-    private static final String TAG = "TFActivity";
+    private static final String TAG = "CameraConfig";
 
     private Classifier classifier;
     private int sensorOrientation;
@@ -46,9 +46,7 @@ public class TensorFlowCameraActivity extends CameraActivity {
 //           Bitmap bitmap =  getBitmap(frame);
 //           Log.i(TAG, "Bitmap is null?" + (bitmap == null ? "isNull" : bitmap));
             CameraEngine engine = getCamera().getCameraEngin();
-            processImage(engine.getRgbFrameBitmap());
-            engine.readyForNextImage();
-
+            processImage(engine, engine.getRgbFrameBitmap());
         }
     };
 
@@ -139,21 +137,24 @@ public class TensorFlowCameraActivity extends CameraActivity {
 //        });
 //    }
 
-    public void processImage(final Bitmap bitmap) {
+    public void processImage(final CameraEngine engine, final Bitmap bitmap) {
         runInBackground(
                 new Runnable() {
                     @Override
                     public void run() {
+                        Log.i(TAG, "processImage......... ");
+
                         if (classifier != null) {
                             final long startTime = SystemClock.uptimeMillis();
                             final List<Classifier.Recognition> results =
                                     classifier.recognizeImage(bitmap, sensorOrientation);
 //                            lastProcessingTimeMs = SystemClock.uptimeMillis() - startTime;
                             Log.d(TAG, "Detect: " + results);
-
                             showResultsInBottomSheet(results);
-
                         }
+                        engine.readyForNextImage();
+
+                        Log.i(TAG, "processImage over+++++++++++++ ");
                     }
                 });
     }

@@ -126,10 +126,6 @@ public class ImageUtils {
             int uvPixelStride,
             int[] out) {
         int yp = 0;
-        width = 640;
-        height = 480;
-        yRowStride = 640;
-        uvRowStride = 640;
         for (int j = 0; j < height; j++) {
             int pY = yRowStride * j;
             int pUV = uvRowStride * (j >> 1);

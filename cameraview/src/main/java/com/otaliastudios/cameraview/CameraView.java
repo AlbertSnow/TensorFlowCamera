@@ -136,7 +136,7 @@ public class CameraView extends FrameLayout implements LifecycleObserver {
     private int mActiveGestures;
 
     // Components
-    private Handler mUiHandler;
+    protected Handler mUiHandler;
     private Executor mFrameProcessingExecutor;
     @VisibleForTesting CameraCallbacks mCameraCallbacks;
     private CameraPreview mCameraPreview;
@@ -2256,13 +2256,21 @@ public class CameraView extends FrameLayout implements LifecycleObserver {
                     @Override
                     public void run() {
                         requestLayout();
-                        for (CameraListener listener : mListeners) {
-                            listener.onPreviewSizeChosen(previewSize.getWidth(),
-                                    previewSize.getHeight());
-                        }
                     }
                 });
             }
+        }
+
+        @Override
+        public void onPreviewSizeChosen(final int width, final int height) {
+            mUiHandler.post(new Runnable() {
+                @Override
+                public void run() {
+                    for (CameraListener listener : mListeners) {
+                        listener.onPreviewSizeChosen(width, height);
+                    }
+                }
+            });
         }
 
         @Override

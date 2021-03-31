@@ -19,6 +19,7 @@ import android.location.Location;
 import android.media.Image;
 import android.media.ImageReader;
 import android.os.Build;
+import android.util.Log;
 import android.util.Pair;
 import android.util.Range;
 import android.util.Rational;
@@ -1468,50 +1469,47 @@ public class Camera2Engine extends CameraBaseEngine implements
     @EngineThread
     @Override
     public void onImageAvailable(ImageReader reader) {
-        LOG.v("onImageAvailable:", "trying to acquire Image.");
-        handleFrame(reader);
-        Image image = null;
-        try {
-            image = reader.acquireLatestImage();
-        } catch (Exception ignore) {
-            ignore.printStackTrace();
-        }
+        Log.i(TAG, "onImageAvailable");
+        Image image = handleFrame(reader);
         if (image == null) {
-            LOG.w("onImageAvailable:", "failed to acquire Image!");
+            Log.w(TAG, "onImageAvailable: image is null");
         } else if (getState() == CameraState.PREVIEW && !isChangingState()) {
             // After preview, the frame manager is correctly set up
             //noinspection unchecked
             Frame frame = getFrameManager().getFrame(image,
                     System.currentTimeMillis());
             if (frame != null) {
-                LOG.v("onImageAvailable:", "Image acquired, dispatching.");
+                Log.w(TAG, "onImageAvailable: dispatch frame");
                 getCallback().dispatchFrame(frame);
             } else {
-                LOG.i("onImageAvailable:", "Image acquired, but no free frames. DROPPING.");
+                Log.w(TAG, "onImageAvailable: frame is null");
             }
         } else {
-            LOG.i("onImageAvailable:", "Image acquired in wrong state. Closing it now.");
+            Log.w(TAG, "onImageAvailable: close image");
             image.close();
         }
     }
 
-    public void handleFrame(ImageReader reader) {
+    public Image handleFrame(ImageReader reader) {
         if (previewWidth == 0 || previewHeight == 0) {
-            return;
+            return null;
         }
         if (rgbBytes == null) {
             rgbBytes = new int[previewWidth * previewHeight];
         }
+
+        Image result = null;
         try {
             final Image image = reader.acquireLatestImage();
+            result = image;
 
             if (image == null) {
-                return;
+                return result;
             }
 
             if (isProcessingFrame) {
                 image.close();
-                return;
+                return result;
             }
             isProcessingFrame = true;
             final Image.Plane[] planes = image.getPlanes();
@@ -1547,8 +1545,8 @@ public class Camera2Engine extends CameraBaseEngine implements
                     };
         } catch (final Exception e) {
             LOGGER.e(e, "Exception!");
-            return;
         }
+        return result;
     }
 
 

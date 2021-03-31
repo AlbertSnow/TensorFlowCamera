@@ -131,9 +131,10 @@ public abstract class CameraEngine implements
         void dispatchError(CameraException exception);
         void dispatchOnVideoRecordingStart();
         void dispatchOnVideoRecordingEnd();
+        void onPreviewSizeChosen(int width, int height);
     }
 
-    protected static final String TAG = CameraEngine.class.getSimpleName();
+    protected static final String TAG = "CameraConfig";
     protected static final CameraLogger LOG = CameraLogger.create(TAG);
     // If this is 2, this means we'll try to run destroy() twice.
     private static final int DESTROY_RETRIES = 2;
@@ -145,7 +146,7 @@ public abstract class CameraEngine implements
     protected int[] rgbBytes = null;
     protected byte[][] yuvBytes = new byte[3][];
 
-    protected boolean isProcessingFrame = false;
+    protected volatile boolean isProcessingFrame = false;
 
     protected Bitmap rgbFrameBitmap = null;
     protected Runnable postInferenceCallback;
@@ -560,6 +561,7 @@ public abstract class CameraEngine implements
 
         rgbFrameBitmap = Bitmap.createBitmap(previewWidth, previewHeight, Bitmap.Config.ARGB_8888);
         Log.i("CameraConfig", "previewWidth: " + previewWidth + ", previewHeight:" + previewHeight);
+        getCallback().onPreviewSizeChosen(width, height);
     }
 
     protected int[] getRgbBytes() {

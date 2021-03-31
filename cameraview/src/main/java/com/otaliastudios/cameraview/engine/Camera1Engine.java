@@ -870,12 +870,10 @@ public class Camera1Engine extends CameraBaseEngine implements
 
         try {
             // Initialize the storage bitmaps once when the resolution is known.
-            if (rgbBytes == null) {
-                Camera.Size previewSize = camera.getParameters().getPreviewSize();
-                previewHeight = previewSize.height;
-                previewWidth = previewSize.width;
-                rgbBytes = new int[previewWidth * previewHeight];
-//                onPreviewSizeChosen(new android.util.Size(previewSize.width, previewSize.height), 90);
+            Camera.Size previewSize = camera.getParameters().getPreviewSize();
+            if (previewSize.height != previewHeight || previewSize.width != previewWidth ||
+                    rgbBytes == null) {
+                updateData(previewSize.width, previewSize.height);
             }
         } catch (final Exception e) {
             LOGGER.e(e, "Exception!");
