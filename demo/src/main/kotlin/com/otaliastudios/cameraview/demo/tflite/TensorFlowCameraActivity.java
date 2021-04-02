@@ -31,7 +31,6 @@ public class TensorFlowCameraActivity extends CameraActivity {
     private static final String TAG = "CameraConfig";
 
     private Classifier classifier;
-    private int sensorOrientation;
     private long lastProcessingTimeMs;
 
     private Handler handler;
@@ -47,7 +46,7 @@ public class TensorFlowCameraActivity extends CameraActivity {
 //           Bitmap bitmap =  getBitmap(frame);
 //           Log.i(TAG, "Bitmap is null?" + (bitmap == null ? "isNull" : bitmap));
             CameraEngine engine = getCamera().getCameraEngin();
-            processImage(engine, engine.getRgbFrameBitmap());
+            processImage(engine, engine.getRgbFrameBitmap(), engine.getSensorOrientation());
         }
     };
 
@@ -100,7 +99,6 @@ public class TensorFlowCameraActivity extends CameraActivity {
      *  Camera1:
      *  public void onPreviewFrame(final byte[] bytes, final Camera camera) {
      *      onPreviewSizeChosen(new Size(previewSize.width, previewSize.height), 90);
-     * @param rotation
      */
     @Override
     public void onPreviewSizeChange(int width, int height) {
@@ -139,7 +137,8 @@ public class TensorFlowCameraActivity extends CameraActivity {
 //    }
 
     @WorkerThread
-    public void processImage(final CameraEngine engine, final Bitmap bitmap) {
+    public void processImage(final CameraEngine engine, final Bitmap bitmap,
+                             final int sensorOrientation) {
         runInBackground(
                 new Runnable() {
                     @Override

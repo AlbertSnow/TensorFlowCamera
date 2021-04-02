@@ -157,7 +157,7 @@ open class CameraActivity : AppCompatActivity(), View.OnClickListener, OptionVie
     }
 
     protected fun updateTips(msg: String?) {
-        tipsView?.text = msg ?: ""
+//        tipsView?.text = msg ?: ""
     }
 
     open fun configCamera(camera: CameraView) {

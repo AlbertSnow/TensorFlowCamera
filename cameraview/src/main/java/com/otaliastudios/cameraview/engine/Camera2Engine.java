@@ -577,7 +577,7 @@ public class Camera2Engine extends CameraBaseEngine implements
                     null);
             mFrameProcessingSurface = mFrameProcessingReader.getSurface();
             outputSurfaces.add(mFrameProcessingSurface);
-            updateData(mFrameProcessingSize.getWidth(), mFrameProcessingSize.getHeight());
+            wrapUpdateData();
         } else {
             mFrameProcessingReader = null;
             mFrameProcessingSize = null;
@@ -611,6 +611,18 @@ public class Camera2Engine extends CameraBaseEngine implements
             throw createCameraException(e);
         }
         return task.getTask();
+    }
+
+    private void wrapUpdateData() {
+        int rotate = 0;
+        final CameraCharacteristics characteristics;
+        try {
+            characteristics = mManager.getCameraCharacteristics(mCameraId);
+            rotate = characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION);
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
+        updateData(mFrameProcessingSize.getWidth(), mFrameProcessingSize.getHeight(), rotate);
     }
 
     @EngineThread

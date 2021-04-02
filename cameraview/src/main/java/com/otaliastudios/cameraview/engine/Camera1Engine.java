@@ -873,7 +873,7 @@ public class Camera1Engine extends CameraBaseEngine implements
             Camera.Size previewSize = camera.getParameters().getPreviewSize();
             if (previewSize.height != previewHeight || previewSize.width != previewWidth ||
                     rgbBytes == null) {
-                updateData(previewSize.width, previewSize.height);
+                updateData(previewSize.width, previewSize.height, 90);
             }
         } catch (final Exception e) {
             LOGGER.e(e, "Exception!");
